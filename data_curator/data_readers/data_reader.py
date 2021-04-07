@@ -24,12 +24,12 @@ class DataReader(object):
             raise NotImplementedError
 
     def set_train_test_reader(self):
-          self.data_info['type'] = 'train_test'
+          self.data_info['split_type'] = 'train_test'
           self.reader_class = TrainTestDataReader
           logger.debug('data is of two-files (train test) format')
     
     def set_total_reader(self):
-          self.data_info['type'] = 'total'
+          self.data_info['split_type'] = 'total'
           self.reader_class = TotalDataReader
           logger.debug('data is of single file(total) format')
 

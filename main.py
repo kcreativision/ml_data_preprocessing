@@ -1,6 +1,7 @@
 from data_curator.data_curator_logger import DataCuratorLogger
 from data_curator.data_readers.data_reader import DataReader
 from data_curator.data_checkers.data_checker import DataChecker
+from data_curator.utils.print_utils import pretty_print
 import argparse
 import warnings
 import pandas as pd
@@ -52,7 +53,11 @@ if __name__=='__main__':
     datafiles = validate_filenames(args.filename)
 
     data_reader = DataReader(datafiles, args.no_target)
-    data_with_meta = data_reader.run()
+    data, metadata = data_reader.run()
+    # pretty_print(data)
+    # pretty_print(metadata)
     
-    data_checker = DataChecker(data_with_meta)
-    data_checker.run()
+    data_checker = DataChecker(data, metadata)
+    metadata, data_checks = data_checker.run()
+    pretty_print(metadata)
+    pretty_print(data_checks)
