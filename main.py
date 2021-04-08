@@ -1,6 +1,7 @@
 from data_curator.data_curator_logger import DataCuratorLogger
 from data_curator.data_readers.data_reader import DataReader
 from data_curator.data_checkers.data_checker import DataChecker
+from data_curator.data_processors.data_processor import DataProcessor
 from data_curator.utils.print_utils import pretty_print
 import argparse
 import warnings
@@ -11,10 +12,12 @@ logger = logging.getLogger(__name__)
 
 
 LOG_LEVEL_HELP = 'set verbose level (default: INFO)'
-NO_TARGET_HELP = 'set that no target column exists in data, useful for general data analysis and unsupervised learning. \
+NO_TARGET_HELP = 'set that no target column exists in data, ' \
+                 'useful for general data analysis and unsupervised learning. \
                  (by default: the last column is considered as target column)'
 # TODO can add a cmd line parameter for target column name or index
 FILENAME_HELP = 'data file name(s). If two are given, first is treated as train data and second as test data'
+
 
 def validate_filenames(filenames):
     filenames_dict = dict()
@@ -59,5 +62,10 @@ if __name__=='__main__':
     
     data_checker = DataChecker(data, metadata)
     metadata, data_checks = data_checker.run()
-    pretty_print(metadata)
-    pretty_print(data_checks)
+    # pretty_print(metadata)
+    # pretty_print(data_checks)
+
+    data_processor = DataProcessor(data, metadata, data_checks)
+    metadata, data_checks = data_checker.run()
+    # pretty_print(metadata)
+    # pretty_print(data_checks)

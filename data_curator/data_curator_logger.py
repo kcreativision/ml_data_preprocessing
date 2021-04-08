@@ -1,8 +1,10 @@
 import logging
 
+
 class DataCuratorLogger(object):
     def __init__(self, level):
         self.level = level
+        self.loglevel = logging.INFO
         self.get_log_level()
         self.set_log_level()
         
@@ -15,4 +17,4 @@ class DataCuratorLogger(object):
             raise ValueError('logging level not understood. valid values: DEBUG, INFO')
     
     def set_log_level(self):
-        logging.basicConfig(level = self.loglevel)
+        logging.basicConfig(level=self.loglevel)

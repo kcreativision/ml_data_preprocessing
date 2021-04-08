@@ -1,6 +1,8 @@
-from data_curator.data_checkers.base_checker import UnsupervisedDataChecker, ClassificationDataChecker, RegressionDataChecker
+from data_curator.data_checkers.base_checker import UnsupervisedDataChecker, ClassificationDataChecker, \
+    RegressionDataChecker
 import logging
 logger = logging.getLogger(__name__)
+
 
 def get_data_keys(data_type, target_col_dict):
     if data_type == 'train_test':
@@ -13,10 +15,9 @@ def get_data_keys(data_type, target_col_dict):
 
 class DataChecker(object):
     def __init__(self, data, metadata):
-        # TODO this class will instantiate the necessary 
-        # class(RegressionDataChecker/ClassificationDataChecker,etc) based on data
         self.data = data
         self.metadata = metadata
+        self.checker_class = None
         self.metadata['main_data_key'], self.metadata['main_target_col'], self.metadata['second_data_key'] = \
             get_data_keys(self.metadata['split_type'], self.metadata['target_col'])
         self.get_feature_dtypes()

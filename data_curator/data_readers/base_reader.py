@@ -7,9 +7,11 @@ logger = logging.getLogger(__name__)
 
 valid_exts = ['.csv']
 
+
 def nullify_empty(df):
     df = df.replace(r'^\s*$', np.nan, regex=True)
     return df
+
 
 class BaseDataReader(object):
     def __init__(self, data_info):
@@ -89,7 +91,7 @@ class TrainTestDataReader(BaseDataReader):
 
     def compare_train_test_cols(self):
         assert set(self.data_info['features']['train']) == set(self.data_info['features']['test']), \
-              'different columns in train and test data'
+            'different columns in train and test data'
         if self.data_info['target_col']['test'] is not None:
             assert self.data_info['target_col']['train'] == self.data_info['target_col']['test']
         logger.debug('PASSED: train test features and target col same/checked')

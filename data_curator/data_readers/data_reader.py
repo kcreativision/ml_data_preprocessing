@@ -8,6 +8,7 @@ class DataReader(object):
     def __init__(self, datafiles, no_target):
         self.data_info = dict()
         self.data_info['datafiles'] = datafiles
+        self.reader_class = None
         self.data_info['no_target'] = True if no_target else False
     
     def run(self):
@@ -16,7 +17,7 @@ class DataReader(object):
 
     def set_reader_type(self):
         if ('train' in self.data_info['datafiles'].keys()) and \
-            ('test' in self.data_info['datafiles'].keys()):
+                ('test' in self.data_info['datafiles'].keys()):
             self.set_train_test_reader()
         elif 'total' in self.data_info['datafiles'].keys():
             self.set_total_reader()
@@ -24,14 +25,11 @@ class DataReader(object):
             raise NotImplementedError
 
     def set_train_test_reader(self):
-          self.data_info['split_type'] = 'train_test'
-          self.reader_class = TrainTestDataReader
-          logger.debug('data is of two-files (train test) format')
+        self.data_info['split_type'] = 'train_test'
+        self.reader_class = TrainTestDataReader
+        logger.debug('data is of two-files (train test) format')
     
     def set_total_reader(self):
-          self.data_info['split_type'] = 'total'
-          self.reader_class = TotalDataReader
-          logger.debug('data is of single file(total) format')
-
-
-    
+        self.data_info['split_type'] = 'total'
+        self.reader_class = TotalDataReader
+        logger.debug('data is of single file(total) format')
