@@ -56,20 +56,6 @@ class BaseDataReader(object):
         for key, filename in self.data_info['datafiles'].items():
             self.data_info['features'][key] = self.data[key].columns
             self.data_info['target_col'][key] = None
-    
-    def establish_cols_with_target(self):
-        logger.debug('last column in train data is the target column')
-        self.data_info['features'] = dict()
-        self.data_info['target_col'] = dict()
-        
-        self.data_info['features']['train'] = self.data['train'].columns.tolist()[:-1]
-        target_col = self.data['train'].columns[-1]
-        self.data_info['target_col']['train'] = target_col
-        
-        if target_col not in self.data['test'].columns:
-            logger.info('No target column in test data. Seems like competition data.')
-            self.data_info['target_col']['test'] = None
-            self.data_info['features']['test'] = self.data['test'].columns.tolist()
 
 
 class TrainTestDataReader(BaseDataReader):
@@ -95,6 +81,27 @@ class TrainTestDataReader(BaseDataReader):
         if self.data_info['target_col']['test'] is not None:
             assert self.data_info['target_col']['train'] == self.data_info['target_col']['test']
         logger.debug('PASSED: train test features and target col same/checked')
+
+    def establish_cols_with_target(self):
+        logger.debug('checking for target column: {0}'.format(self.data_info['target_col']))
+        self.data_info['features'] = dict()
+        self.data_info['target_col'] = dict()
+
+        target_col = self.data_info['target_col']
+        self.data_info['target_col']['train'] = target_col
+
+        assert target_col in self.data['train'].columns, \
+            'target column: {0} not present in training data'.format(target_col)
+        self.data_info['features']['train'] = self.data['train'].columns.tolist().remove(target_col)
+
+        if target_col not in self.data['test'].columns:
+            logger.info('No target column in test data. Seems like competition data.')
+            self.data_info['target_col']['test'] = None
+            self.data_info['features']['test'] = self.data['test'].columns.tolist()
+        else:
+            logger.debug('target column present in test data.')
+            self.data_info['target_col']['test'] = target_col
+            self.data_info['features']['test'] = self.data['test'].columns.tolist().remove(target_col)
         
 
 class TotalDataReader(BaseDataReader):
@@ -107,3 +114,15 @@ class TotalDataReader(BaseDataReader):
         self.read_data()
         self.establish_cols()
         return self.data, self.data_info
+
+    def establish_cols_with_target(self):
+        self.data_info['features'] = dict()
+        self.data_info['target_col'] = dict()
+
+        target_col = self.data_info['decision_variable']
+        self.data_info['target_col']['total'] = target_col
+
+        assert target_col in self.data['total'].columns, \
+            'target column: {0} not present in total data'.format(target_col)
+        self.data_info['features']['total'] = self.data['total'].columns.tolist().remove(target_col)
+        logger.debug('fetched target column: {0}'.format(target_col))

@@ -6,6 +6,13 @@ logger = logging.getLogger(__name__)
 pd.options.mode.use_inf_as_na = True
 
 
+def get_range(col):
+    if (col.dtype.str.startswith('<f')) or (col.dtype.str.startswith('<i')):
+        return col.max() - col.min()
+    else:
+        return col.nunique()
+
+
 class BaseDataChecker(object):
     def __init__(self, data, metadata):
         self.data = data
@@ -16,8 +23,8 @@ class BaseDataChecker(object):
     def initiate_check_output(self):
         self.data_checks['column_checks'] = dict()
         for key, dataset in self.data.items():
-            self.data_checks['column_checks'][key] = pd.DataFrame(columns=dataset.columns)
-        # TODO add another dataframe for trait vs test relative comparison output
+            self.data_checks['column_checks'][key] = dict()
+        # TODO add another check for trait vs test relative comparison output
 
     def check_missing_values(self):
         """
@@ -31,7 +38,8 @@ class BaseDataChecker(object):
             notall_missing_val_check = np.invert(self.data[key].isnull().all(axis=0).values)
             final_check = np.multiply(any_missing_val_check, notall_missing_val_check)
             missing_val_check = ['FAIL' if t else 'PASS' for t in final_check]
-            self.data_checks['column_checks'][key].loc['MISSING_VALUE_CHECK'] = missing_val_check
+            self.data_checks['column_checks'][key]['MISSING_VALUE_CHECK'] = dict(zip(self.data[key].columns,
+                                                                                     missing_val_check))
 
     def check_cardinality(self):
         """
@@ -42,15 +50,16 @@ class BaseDataChecker(object):
         for key in self.data.keys():
             max_cardinal_cols = np.equal(self.data[key].nunique(axis=0).values,
                                          self.data[key].shape[0])
+            over_range_cols = self.data[key].apply(lambda x: get_range(x), axis=0) >= self.data[key].shape[0]
             min_cardinal_cols = np.equal(self.data[key].nunique(axis=0).values, 1)
             complete_missing_cols = self.data[key].isnull().all(axis=0).values
 
-            cardinality_boolean = np.logical_or(max_cardinal_cols,
-                                                np.logical_or(min_cardinal_cols,
-                                                              complete_missing_cols))
+            cardinality_boolean = np.logical_or(np.logical_and(max_cardinal_cols, over_range_cols),
+                                                np.logical_or(min_cardinal_cols, complete_missing_cols))
             cardinality_check = ['FAIL' if t else 'PASS' for t in cardinality_boolean]
 
-            self.data_checks['column_checks'][key].loc['CARDINALITY_CHECK'] = cardinality_check
+            self.data_checks['column_checks'][key]['CARDINALITY_CHECK'] = dict(zip(self.data[key].columns,
+                                                                                   cardinality_check))
 
     def check_validation_split(self):
         '''
@@ -67,7 +76,7 @@ class BaseDataChecker(object):
             self.data_checks['validation_reco']['val_type'] = 'cross_val'
             self.data_checks['validation_reco']['val_size'] = 10 if num_samples < 1000 else 3
 
-    def train_test_dtypes(self):
+    def check_train_test_dtypes(self):
         """
         testing only for train_test type:
         returns column-wise PASS/FAIL:
@@ -77,10 +86,11 @@ class BaseDataChecker(object):
         if self.metadata['split_type'] == 'total':
             return 1
         else:
+            self.data_checks['column_checks']['test']['DTYPE_CHECK'] = dict()
             for test_feature in self.metadata['features']['test']:
                 check_bool = self.metadata['feature_dtypes']['train'][test_feature] == \
                              self.metadata['feature_dtypes']['test'][test_feature]
-                self.data_checks['column_checks']['test'].loc['DTYPE_CHECK', test_feature] = \
+                self.data_checks['column_checks']['test']['DTYPE_CHECK'][test_feature] = \
                     'PASS' if check_bool else 'FAIL'
 
     def check_memory_issue(self):
@@ -98,7 +108,7 @@ class RegressionDataChecker(BaseDataChecker):
         self.check_validation_split()
         self.check_memory_issue()
         self.check_frequency()
-        self.train_test_dtypes()
+        self.check_train_test_dtypes()
         return self.metadata, self.data_checks
 
     def check_frequency(self):
@@ -116,7 +126,7 @@ class ClassificationDataChecker(BaseDataChecker):
         self.check_validation_split()
         self.check_class_balance()
         self.check_memory_issue()
-        self.train_test_dtypes()
+        self.check_train_test_dtypes()
         return self.metadata, self.data_checks
 
     def check_class_balance(self):

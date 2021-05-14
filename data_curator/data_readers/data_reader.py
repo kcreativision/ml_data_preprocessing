@@ -5,11 +5,12 @@ logger = logging.getLogger(__name__)
 
 
 class DataReader(object):
-    def __init__(self, datafiles, no_target):
+    def __init__(self, datafiles, no_target, decision_variable):
         self.data_info = dict()
         self.data_info['datafiles'] = datafiles
         self.reader_class = None
         self.data_info['no_target'] = True if no_target else False
+        self.data_info['decision_variable'] = decision_variable
     
     def run(self):
         self.set_reader_type()
