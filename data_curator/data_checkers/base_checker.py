@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import logging
+import itertools
 
 logger = logging.getLogger(__name__)
 pd.options.mode.use_inf_as_na = True
@@ -93,6 +94,27 @@ class BaseDataChecker(object):
                 self.data_checks['column_checks']['test']['DTYPE_CHECK'][test_feature] = \
                     'PASS' if check_bool else 'FAIL'
 
+    def check_duplicate_columns(self):
+        """
+        rightmost column(s) would be considered duplicate and the leftmost is passed
+        :return:
+        """
+        for key in self.data.keys():
+            data = self.data[key]
+            col_combinations = [list(x) for x in itertools.combinations(np.arange(data.shape[1]), 2)]
+            col_equals = [data.iloc[:, col_ind1].equals(data.iloc[:, col_ind2])
+                          for col_ind1, col_ind2 in col_combinations]
+            col_duplicates = [col_combinations[i] for i, t in enumerate(col_equals) if t]
+            duplicate_check = ['PASS'] * data.shape[1]
+            self.data_checks['column_checks'][key]['DUPLICATE_CHECK'] = dict(zip(self.data[key].columns,
+                                                                                 duplicate_check))
+            for col1_ind, col2_ind in col_duplicates:
+                # considering the leftmost column as the base
+                col2_base = min([t0 for t0, t1 in col_duplicates if t1 == col2_ind])
+                self.data_checks['column_checks'][key]['DUPLICATE_CHECK'][data.columns[col2_ind]] = 'FAIL'
+                self.data_checks['column_checks'][key]['DUPLICATE_CHECK'][str(data.columns[col2_ind] + '_BASE')] = \
+                    data.columns[col2_base]
+
     def check_memory_issue(self):
         """figure out if the total computation exceeds the memory limit"""
         pass
@@ -109,6 +131,7 @@ class RegressionDataChecker(BaseDataChecker):
         self.check_memory_issue()
         self.check_frequency()
         self.check_train_test_dtypes()
+        self.check_duplicate_columns()
         return self.metadata, self.data_checks
 
     def check_frequency(self):
@@ -127,6 +150,7 @@ class ClassificationDataChecker(BaseDataChecker):
         self.check_class_balance()
         self.check_memory_issue()
         self.check_train_test_dtypes()
+        self.check_duplicate_columns()
         return self.metadata, self.data_checks
 
     def check_class_balance(self):
@@ -144,4 +168,5 @@ class UnsupervisedDataChecker(BaseDataChecker):
         self.check_cardinality()
         self.check_validation_split()
         self.check_memory_issue()
+        self.check_duplicate_columns()
         return self.metadata, self.data_checks
