@@ -99,18 +99,34 @@ class BaseDataChecker(object):
         rightmost column(s) would be considered duplicate and the leftmost is passed
         :return:
         """
+
+        def check_if_equal(ind0, ind1):
+            col_names = [data.columns[ind0], data.columns[ind1]]
+            df = data[col_names]
+            df = df.dropna()
+            return df[col_names[0]].equals(df[col_names[1]])
+
+        def find_actual_base(bases):
+            if len(bases) == 1:
+                return bases[0]
+            else:
+                df = data[data.columns[bases]]
+                not_na_proportions = df.notnull().sum(axis=0)
+                col_ind_least_na = bases[not_na_proportions.argmax()]
+                return col_ind_least_na
+
         for key in self.data.keys():
             data = self.data[key]
             col_combinations = [list(x) for x in itertools.combinations(np.arange(data.shape[1]), 2)]
-            col_equals = [data.iloc[:, col_ind1].equals(data.iloc[:, col_ind2])
-                          for col_ind1, col_ind2 in col_combinations]
+            col_equals = [check_if_equal(col_ind1, col_ind2) for col_ind1, col_ind2 in col_combinations]
             col_duplicates = [col_combinations[i] for i, t in enumerate(col_equals) if t]
             duplicate_check = ['PASS'] * data.shape[1]
             self.data_checks['column_checks'][key]['DUPLICATE_CHECK'] = dict(zip(self.data[key].columns,
                                                                                  duplicate_check))
             for col1_ind, col2_ind in col_duplicates:
                 # considering the leftmost column as the base
-                col2_base = min([t0 for t0, t1 in col_duplicates if t1 == col2_ind])
+                col2_bases = [t0 for t0, t1 in col_duplicates if t1 == col2_ind]
+                col2_base = find_actual_base(col2_bases)
                 self.data_checks['column_checks'][key]['DUPLICATE_CHECK'][data.columns[col2_ind]] = 'FAIL'
                 self.data_checks['column_checks'][key]['DUPLICATE_CHECK'][str(data.columns[col2_ind] + '_BASE')] = \
                     data.columns[col2_base]
@@ -154,8 +170,21 @@ class ClassificationDataChecker(BaseDataChecker):
         return self.metadata, self.data_checks
 
     def check_class_balance(self):
-        # TODO fill this - critical
-        pass
+        target_col = self.metadata['main_target_col']
+        data = self.data[self.metadata['main_data_key']]
+        classes = data[target_col].unique()
+        class_num_rows = [data[data[target_col] == t].__len__() for t in classes]
+        minority_class_ind = class_num_rows.index(min(class_num_rows))
+        majority_class_ind = class_num_rows.index(max(class_num_rows))
+        self.metadata['minority_class'] = classes[minority_class_ind]
+        self.metadata['majority_class'] = classes[majority_class_ind]
+        self.metadata['minority_class_%'] = int(100 * class_num_rows[minority_class_ind] / data.shape[0])
+        self.metadata['majority_class_%'] = int(100 * class_num_rows[majority_class_ind] / data.shape[0])
+        self.data_checks['data_checks'] = dict()
+        if self.metadata['minority_class_%']/self.metadata['majority_class_%'] < 0.2:
+            self.data_checks['data_checks']['class_balance_check'] = 'FAIL'
+        else:
+            self.data_checks['data_checks']['class_balance_check'] = 'PASS'
 
 
 class UnsupervisedDataChecker(BaseDataChecker):

@@ -42,8 +42,8 @@ if __name__ == '__main__':
 
     data_reader = DataReader(datafiles, args.no_target, args.target_col)
     data, metadata = data_reader.run()
-    # pretty_print(data)
-    # pretty_print(metadata)
+    # pu.pretty_print(data)
+    pu.pretty_print(metadata)
     
     data_checker = DataChecker(data, metadata)
     metadata, data_checks = data_checker.run()
