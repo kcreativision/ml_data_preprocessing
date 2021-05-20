@@ -1,5 +1,6 @@
 from data_curator.data_checkers.base_checker import UnsupervisedDataChecker, ClassificationDataChecker, \
     RegressionDataChecker
+import data_curator.utils.data_checker_utils as dcu
 import logging
 logger = logging.getLogger(__name__)
 
@@ -21,14 +22,16 @@ class DataChecker(object):
         self.metadata['main_data_key'], self.metadata['main_target_col'], self.metadata['second_data_key'] = \
             get_data_keys(self.metadata['split_type'], self.metadata['target_col'])
         self.get_feature_dtypes()
+        self.metadata['cat_to_num_threshold'] = 100
     
     def get_feature_dtypes(self):
         self.metadata['feature_dtypes'] = dict()
         for data_key in [self.metadata['main_data_key'], self.metadata['second_data_key']]:
             if data_key is None:
                 continue
+            main_dtypes = [dcu.get_base_types(t) for t in self.data[data_key].dtypes.values]
             self.metadata['feature_dtypes'][data_key] = dict(zip(self.data[data_key].dtypes.index, 
-                                                                 self.data[data_key].dtypes.values))
+                                                                 main_dtypes))
 
     def run(self):
         self.set_checker_type()
@@ -52,7 +55,7 @@ class DataChecker(object):
     def data_is_classification(self):
         train_data = self.data[self.metadata['main_data_key']]
         if (train_data[self.metadata['main_target_col']].dtype == 'object') or \
-           (train_data[self.metadata['main_target_col']].unique().__len__() <= 100):
+           (train_data[self.metadata['main_target_col']].unique().__len__() <= self.metadata['cat_to_num_threshold']):
             # TODO using arbitrary #classes, check for better solution
             return 1
         else:

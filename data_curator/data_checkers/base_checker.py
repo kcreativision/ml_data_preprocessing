@@ -43,6 +43,10 @@ class BaseDataChecker(object):
                                                                                      missing_val_check))
 
     def check_cardinality(self):
+        self.check_critical_cardinality()
+        self.check_low_cardinality()
+
+    def check_critical_cardinality(self):
         """
         returns column-wise PASS/FAIL:
             FAIL: if completely unique or single unique value or empty
@@ -59,8 +63,28 @@ class BaseDataChecker(object):
                                                 np.logical_or(min_cardinal_cols, complete_missing_cols))
             cardinality_check = ['FAIL' if t else 'PASS' for t in cardinality_boolean]
 
-            self.data_checks['column_checks'][key]['CARDINALITY_CHECK'] = dict(zip(self.data[key].columns,
-                                                                                   cardinality_check))
+            self.data_checks['column_checks'][key]['CRITICAL_CARDINALITY_CHECK'] = dict(zip(self.data[key].columns,
+                                                                                            cardinality_check))
+
+    def check_low_cardinality(self):
+        """
+        returns column-wise PASS/FAIL - ONLY for numeric features:
+            FAIL: if low number of unique values specified by self.metadata['cat_to_num_threshold']
+            PASS: Otherwise
+        """
+        for key in self.data.keys():
+            numeric_cols = [key for key, val in self.metadata['feature_dtypes'][key].items()
+                            if (val in ['float', 'int'])]
+            other_cols = [t for t in self.data[key].columns if t not in numeric_cols]
+            numeric_data = self.data[key][numeric_cols]
+            low_cardinality_boolean = np.less_equal(numeric_data.nunique(axis=0).values,
+                                                    self.metadata['cat_to_num_threshold'])
+            low_cardinality_check = ['FAIL' if t else 'PASS' for t in low_cardinality_boolean]
+
+            self.data_checks['column_checks'][key]['LOW_CARDINALITY_CHECK'] = dict(zip(numeric_cols,
+                                                                                       low_cardinality_check))
+            self.data_checks['column_checks'][key]['LOW_CARDINALITY_CHECK'].update(
+                dict(zip(other_cols, ['Not_Applicable']*len(other_cols))))
 
     def check_validation_split(self):
         '''
@@ -95,10 +119,6 @@ class BaseDataChecker(object):
                     'PASS' if check_bool else 'FAIL'
 
     def check_duplicate_columns(self):
-        """
-        rightmost column(s) would be considered duplicate and the leftmost is passed
-        :return:
-        """
 
         def check_if_equal(ind0, ind1):
             col_names = [data.columns[ind0], data.columns[ind1]]
@@ -131,6 +151,22 @@ class BaseDataChecker(object):
                 self.data_checks['column_checks'][key]['DUPLICATE_CHECK'][str(data.columns[col2_ind] + '_BASE')] = \
                     data.columns[col2_base]
 
+    def check_target_var(self):
+        """
+        currently only highlights if any issue exists with target variable
+        :return:
+        """
+        main_data_key = self.metadata['main_data_key']
+        main_target_key = self.metadata['main_target_col']
+        column_checks = self.data_checks['column_checks']
+        for key, val in column_checks[main_data_key].items():
+            if val[main_target_key] == 'FAIL':
+                logger.info('{test} FAILED FOR {col}'.format(test=key, col=main_target_key))
+            elif val[main_target_key] == 'PASS':
+                logger.debug('{test} PASSED FOR {col}'.format(test=key, col=main_target_key))
+            else:
+                raise ValueError
+
     def check_memory_issue(self):
         """figure out if the total computation exceeds the memory limit"""
         pass
@@ -143,11 +179,13 @@ class RegressionDataChecker(BaseDataChecker):
     def run(self):
         self.check_missing_values()
         self.check_cardinality()
+        self.check_low_cardinality()
         self.check_validation_split()
         self.check_memory_issue()
         self.check_frequency()
         self.check_train_test_dtypes()
         self.check_duplicate_columns()
+        self.check_target_var()
         return self.metadata, self.data_checks
 
     def check_frequency(self):
@@ -162,11 +200,13 @@ class ClassificationDataChecker(BaseDataChecker):
     def run(self):
         self.check_missing_values()
         self.check_cardinality()
+        self.check_low_cardinality()
         self.check_validation_split()
         self.check_class_balance()
         self.check_memory_issue()
         self.check_train_test_dtypes()
         self.check_duplicate_columns()
+        self.check_target_var()
         return self.metadata, self.data_checks
 
     def check_class_balance(self):
@@ -195,6 +235,7 @@ class UnsupervisedDataChecker(BaseDataChecker):
         # TODO add check for only 'total' type as 'train_test' might not make sense here
         self.check_missing_values()
         self.check_cardinality()
+        self.check_low_cardinality()
         self.check_validation_split()
         self.check_memory_issue()
         self.check_duplicate_columns()

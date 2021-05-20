@@ -5,15 +5,16 @@ logger = logging.getLogger(__name__)
 
 
 class DataProcessor(object):
-    def __init__(self, data, metadata, data_checks):
+    def __init__(self, data, metadata, data_checks, params):
         self.data = data
         self.metadata = metadata
         self.data_checks = data_checks
+        self.params = params
         self.processor_class = None
 
     def run(self):
         self.set_checker_type()
-        return self.processor_class(self.data, self.metadata, self.data_checks).run()
+        return self.processor_class(self.data, self.metadata, self.data_checks, self.params).run()
 
     def set_checker_type(self):
         if self.metadata['learning_type'] == 'unsupervised':
@@ -21,7 +22,6 @@ class DataProcessor(object):
         elif self.metadata['learning_type'] == 'classification':
             self.set_classification_data_checker()
         elif self.metadata['learning_type'] == 'regression':
-            # TODO check other cases
             self.set_regression_data_checker()
         else:
             raise NotImplementedError
