@@ -1,6 +1,7 @@
 from data_curator.data_checkers.base_checker import UnsupervisedDataChecker, ClassificationDataChecker, \
     RegressionDataChecker
 import data_curator.utils.data_checker_utils as dcu
+import numpy as np
 import logging
 logger = logging.getLogger(__name__)
 
@@ -21,8 +22,8 @@ class DataChecker(object):
         self.checker_class = None
         self.metadata['main_data_key'], self.metadata['main_target_col'], self.metadata['second_data_key'] = \
             get_data_keys(self.metadata['split_type'], self.metadata['target_col'])
-        self.get_feature_dtypes()
         self.metadata['cat_to_num_threshold'] = 100
+        self.get_feature_dtypes()
     
     def get_feature_dtypes(self):
         self.metadata['feature_dtypes'] = dict()
@@ -30,6 +31,9 @@ class DataChecker(object):
             if data_key is None:
                 continue
             main_dtypes = [dcu.get_base_types(t) for t in self.data[data_key].dtypes.values]
+            _cols_below_threshold_inds = list(np.array(self.data[data_key].nunique()) <=
+                                              self.metadata['cat_to_num_threshold'])
+            main_dtypes = [t+'_discreet' if _cols_below_threshold_inds[i] else t for i, t in enumerate(main_dtypes)]
             self.metadata['feature_dtypes'][data_key] = dict(zip(self.data[data_key].dtypes.index, 
                                                                  main_dtypes))
 

@@ -160,12 +160,11 @@ class BaseDataChecker(object):
         main_target_key = self.metadata['main_target_col']
         column_checks = self.data_checks['column_checks']
         for key, val in column_checks[main_data_key].items():
-            if val[main_target_key] == 'FAIL':
-                logger.info('{test} FAILED FOR {col}'.format(test=key, col=main_target_key))
-            elif val[main_target_key] == 'PASS':
-                logger.debug('{test} PASSED FOR {col}'.format(test=key, col=main_target_key))
+            _pass_status = val[main_target_key]
+            if _pass_status in ['PASS', 'FAIL', 'Not_Applicable']:
+                logger.info('{test} {status} for {col}'.format(test=key, status=_pass_status, col=main_target_key))
             else:
-                raise ValueError
+                raise ValueError('unknown status for target column {0} {1}'.format(key, val[main_target_key]))
 
     def check_memory_issue(self):
         """figure out if the total computation exceeds the memory limit"""

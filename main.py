@@ -59,12 +59,11 @@ if __name__ == '__main__':
     # pu.pretty_print(data_checks)
     metadata_to_json = pu.create_json_serializable(metadata)
     data_checks_to_json = pu.create_json_serializable(data_checks, serialize_df=True)
-
     pu.save_json(metadata_to_json, data_folder, 'data_checker_meta.json')
     pu.save_json(data_checks_to_json, data_folder, 'data_checker_output.json')
 
     PARAMS = Params().params
     data_processor = DataProcessor(data, metadata, data_checks, PARAMS)
-    # metadata, data_checks = data_processor.run()
-    # pretty_print(metadata)
-    # pretty_print(data_checks)
+    processed_data, processed_info = data_processor.run()
+    pu.pretty_print(processed_info)
+    # pu.pretty_print(data_checks)
